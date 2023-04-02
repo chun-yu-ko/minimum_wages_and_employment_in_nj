@@ -1,0 +1,459 @@
+---
+title: "Minimum Wages and Employment: A Case Study of the Fast Food Industry in New Jersey and Pennsylvania"
+author: Chun Yu, Ko
+date: Feburary 27, 2023
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+---
+
+```{r echo = F, warning=F, message=F}
+suppressMessages({
+  library(dplyr)
+  library(data.table)
+  library(kableExtra)
+  library(scales)
+  library(ggplot2)
+  library(ggrepel)
+  library(ggpubr)
+  library(ggthemes)
+  library(colorspace)
+  library(plotly)
+})
+
+```
+
+
+```{r echo = F, warning=F, message=F}
+data_wage_unemployment <- rbind(
+  "data/min_wage_nj.csv" %>%
+    fread(col.names = c("date", "value")) %>%
+    mutate(state = "nj", index = "minimum wages"),
+  "data/min_wage_pa.csv" %>%
+    fread(col.names = c("date", "value")) %>%
+    mutate(state = "pa", index = "minimum wages"),
+  "data/unemployment_nj.csv" %>%
+    fread(col.names = c("date", "value")) %>%
+    mutate(state = "nj", index = "unemployment")
+)
+
+data_min_wage_change <- data.frame(
+  x_start = c("1989-11-01", "1991-01-01", "1993-01-01") %>% as.Date(),
+  x_end = c("1991-01-01", "1992-01-01", "1994-01-01") %>% as.Date(),
+  y_start = c(3.35, 3.80, 4.25),
+  y_end = c(3.80, 4.25, 5.05),
+  text = rep("", 3)
+)
+
+data_survey_response <- data.frame(
+  wave = c(rep(1, 3), rep(2, 6)),
+  vars = c("餐廳數量", "拒絕", "受訪", "餐廳數量", "已關閉", "裝修中", "暫時關閉", "拒絕", "受訪"),
+  all = c(473, 63, 410, 410, 6, 2, 2, 1, 399),
+  nj = c(364, 33, 331, 331, 5, 2, 2, 1, 321),
+  pa = c(109, 30, 79, 79, 1, 0, 0, 0, 78)
+)
+
+data_survey <- "data/survey.dat" %>%
+  fread(col.names = c(
+    "sheet", "chain", "co_owned", "state",
+    "southj", "centralj", "northj", "pa1", "pa2", "shore",
+    "ncalls", "empft", "emppt", "nmgrs", "wage_st", "inctime", "firstinc", "bonus",
+    "pctaff", "meals", "open", "hrsopen", "psoda", "pfry", "pentree", "nregs", "nregs11",
+    "type2", "status2", "date2", "ncalls2", "empft2", "emppt2", "nmgrs2", "wage_st2",
+    "inctime2", "firstin2", "special2", "meals2", "open2r", "hrsopen2", "psoda2",
+    "pfry2", "pentree2", "nregs2", "nregs112"
+  )) %>%
+  mutate(
+    chain = chain %>% factor(., c(1:4), c("Burger King", "KFC", "Roy Rogers", "Wendy's")),
+    co_owned = co_owned %>% factor(., c(0, 1), c("Not company-owned", "Company-owned")),
+    state = state %>% factor(., c(0, 1), c("PA", "NJ")),
+    location = paste(southj, centralj, northj, pa1, pa2, sep = ""),
+    location = location %>% strtoi(., base = 2) %>% log2(.),
+    location = 5 - location,
+    location = factor(location, 1:5, c("southern NJ", "central NJ", "northern NJ", "PA, northeast suburbs of Phila", "PA, Easton etc")),
+    location_nj_shore = shore == 1,
+    bonus = bonus %>% factor(., c(0:1), c("none", "cash bounty for new workers")),
+    meals = meals %>% factor(., c(0:3), c("none", "free meals", "reduced price meals", "both free and reduced price meals")),
+    type2 = type2 %>% factor(., c(1, 2), c("phone", "person")),
+    status2 = status2 %>% factor(., c(0:5), c("refused second interview", "answered 2nd interview", "closed for renovations", "closed permanently", "closed for highway construction", "closed due to Mall fire")),
+    date2 = date2 %>% as.character() %>% as.Date(., format = "%m%d%y"),
+    special2 = special2 %>% factor(., c(0:1), c("none", "special program for new workers")),
+    meals2 = meals2 %>% factor(., c(0:3), c("none", "free meals", "reduced price meals", "both free and reduced price meals")),
+  ) %>%
+  mutate_if(is.character, ~ as.numeric(.)) %>%
+  mutate(
+    fte = empft + nmgrs + 0.5 * emppt,
+    fte2 = empft2 + nmgrs2 + 0.5 * emppt2,
+    rate_empft = (empft) / (fte),
+    rate_empft2 = ifelse(fte2 > 0, (empft2) / (fte2), NA),
+    rate_wage_425 = wage_st == 4.25,
+    rate_wage_4252 = wage_st2 == 4.25,
+    rate_wage_5052 = wage_st2 == 5.05,
+    rate_bonus = bonus == "cash bounty for new workers",
+    rate_bonus2 = special2 == "special program for new workers",
+    pofm = psoda + pfry + pentree,
+    pofm2 = psoda2 + pfry2 + pentree2,
+    dfte = fte2 - fte,
+    dwage = wage_st2 - wage_st,
+    dpofm = pofm2 - pofm
+  ) %>%
+  mutate_at(.vars = c("rate_wage_425", "rate_wage_4252", "rate_wage_5052", "rate_bonus", "rate_bonus2"), ~ ifelse(is.na(.), 0, .)) %>%
+  mutate_at(.vars = c("rate_empft", "rate_empft2", "rate_wage_425", "rate_wage_4252", "rate_wage_5052", "rate_bonus", "rate_bonus2"), ~ as.numeric(.) * 100) %>%
+  select(-southj, -centralj, -northj, -pa1, -pa2, -shore) %>%
+  data.table()
+```
+
+# 摘要
+
+> ***評估基本工資調漲對就業市場的衝擊紐澤西與賓州速食店的案例研究***
+
+  - 1992 年 4 月 1 日紐澤西調漲基本工資
+  
+    - USD 4.25 ➜ USD 5.05
+ 
+  - 資意味著「單位勞動力價格 ↑」，懷疑會造成
+
+    - 就業人口 ↓
+  
+    - 就業率 ↓
+ 
+  - 評估「調漲基本工資對低工資的勞工就業人口的影響」
+  
+## 本文資訊
+
+ - Author: David Card and Alan B. Krueger
+ 
+ - Publish date: October 1993
+ 
+ - Publish at: National Bureau of Economic Research Working Paper Series
+
+ - DOI: 10.3386/w4509
+ 
+ - [WEB Page](https://www.nber.org/papers/w4509)
+
+ - [PDF](https://www.nber.org/system/files/working_papers/w4509/w4509.pdf)
+ 
+## 其他參考資訊
+
+  - [FRED - State Minimum Wage Rate for New Jersey](https://fred.stlouisfed.org/series/STTMINWGNJ)
+  
+  - [FRED - Unemployment Rate in New Jersey](https://fred.stlouisfed.org/series/NJURN)
+  
+  - [David Card - Dataset](https://davidcard.berkeley.edu/data_sets.html)
+  
+  - [GitHub / alopatina / Applied-Causal-Analysis](https://github.com/alopatina/Applied-Causal-Analysis)
+  
+  - [GitHub / BiomedSciAI / causallib](https://github.com/alopatina/Applied-Causal-Analysis)
+  
+  - [GitHub / dnackat / data-analysis-for-social-scientists-mitx](https://github.com/dnackat/data-analysis-for-social-scientists-mitx/blob/master/Homeworks/HW9/hw9.R)
+
+# 研究背景
+
+## 紐澤西的就業政策與時空背景
+
+  - 1989 / 11 立法調漲基本工資 USD 3.35 ➜ USD 3.80
+  
+  - 1989 / 04  再次立法調漲基本工資 ➜ USD 4.25 
+  
+  - 1992 / 04  紐澤西州立法 ➜ USD 5.05
+  
+    - 全美最低工資最高的州，遭強烈反對
+    
+    - 立法通過至生效時，紐澤西經濟開始衰退
+
+```{r echo = F, warning=F, message=F}
+data_wage_unemployment %>%
+  filter(
+    state == "nj", index == "minimum wages",
+    date < "2006-01-01"
+  ) %>%
+  plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
+  add_lines() %>%
+  add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
+  add_annotations(
+    data = data_min_wage_change,
+    ax = ~x_start, x = ~x_end,
+    ay = ~y_start, y = ~y_end,
+    text = ~text,
+    xref = "x", yref = "y", axref = "x", ayref = "y",
+    showarrow = T, xanchor = "left"
+  ) %>%
+  layout(shapes = list(list(
+    type = "line", xref = "paper",
+    x0 = as.Date("1989-01-01"), x1 = as.Date("1989-01-01"),
+    y0 = 1, y1 = 5
+  )))
+```
+
+
+```{r echo = F, warning=F, message=F}
+subplot(data_wage_unemployment %>%
+  filter(state == "nj", index == "minimum wages") %>%
+  plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
+  add_lines() %>%
+  add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
+  add_annotations(
+    data = data_min_wage_change,
+    ax = ~x_start, x = ~x_end,
+    ay = ~y_start, y = ~y_end,
+    text = ~text,
+    xref = "x", yref = "y", axref = "x", ayref = "y",
+    showarrow = T, xanchor = "left"
+  ),
+data_wage_unemployment %>%
+  filter(state == "nj", index == "unemployment") %>%
+  plot_ly(data = ., x = ~date, y = ~value, name = "失業率") %>%
+  add_lines(),
+nrows = 2,
+shareX = TRUE
+) %>%
+  layout(
+    # hovermode = "x unified",
+    xaxis = list(
+      title = "Year",
+      rangeslider = list(type = "date")
+    )
+  )
+```
+
+
+# 研究方法
+
+## 研究策略思考
+
+  - 直接想像：前後對照
+  
+    - 其實可以只看紐澤西速食店調漲前後的差異
+    
+    - 但無法避免「時間與季節性因素」的混淆
+    
+  - 其他可以利用的條件
+  
+    - 紐澤西有調漲基本工資、但隔壁的賓州沒有
+    
+    - 紐澤西是小州，經濟與附近各州有密切聯繫
+    
+    - 比較「紐澤西前後差異」、與「賓州前後差異」的差異，可以有效避開混淆
+
+## 研究類型
+
+Prospective Cohort study with Fixed Population
+
+前瞻性固定人群的隊列研究
+
+ - Prospective 前瞻性
+ 
+ - Cohort Study 隊列研究
+ 
+ - Fixed Population 固定人群
+
+## 名詞解釋
+
+### Cohort Study
+
+  - 實驗性研究（RCT、A B test）以外最常用的兩種觀察性研究方法之一
+  
+  - 在⼀段時間內追踪特定族群（具有共同特徵或經歷）
+  
+  - 先找好幾群要觀察的人，隨著時間推移持續觀察他們的變化
+  
+  - 有時候稱：follow-up、longitudinal study 縱向研究
+  
+### Prospective Cohort Study
+
+  - 定義：先開始專案規劃選定人群後，事件才發生、數據才開始記錄
+  
+  - 操作：根據過去或當前的資料來進行分眾
+  
+  - 優勢：精確、麻煩、資訊少、偏差少
+  
+  - 劣勢：跟實驗一樣需等待、可能存在偏誤、與混淆因子
+    
+    - 可能的偏誤：Losses to Follow-Up、Healthy Worker Effect
+  
+### Fixed population 固定人群
+
+  - 依據特徵或暴露因子分組後，組別不會隨時間改變
+  
+  - 但參與分組的研究對象可能隨時間而失去聯繫 Losses to Follow-Up
+  
+## 研究時間
+
+  - planning: early 1992
+    
+  - 1st interview: 1992 年 2 ~ 3 月
+  
+    - 電訪
+    
+  - 2nd interview: 1992 年 11 ~ 12 月
+  
+    - 電訪 + 實地確認 Losses to Follow-Up
+ 
+## 研究對象
+    
+  - subject: 速食店
+    
+    - 低薪者多，低薪者中 25% 在速食店工作
+      
+    - 速食店都只給基本工資，所以會需要跟進調漲薪資
+      
+    - 速食店工作和產品同值性高，容易取得可靠就業、工資、產品數據、沒有小費（減少薪資衡量困難）
+      
+    - 速食店是需要特許經營，選樣本相對容易
+      
+    - 過去經驗表明速食店對電話訪談的回覆意願高
+
+## 暴露因子與結果
+  
+  - outcome: 員工數量改變
+  
+  - exposure / treatment: 基本工資由 4.25 -> 5.05, 1992, Apr., NJ
+    
+    - exp group: 會調漲基本工資的紐澤西，n = 364
+      
+    - non-exp group: 不會調漲基本工資的賓州，n = 109
+
+## 統計方法
+
+  1. T-statistic for test of equality of means
+  
+  2. Linear regression
+
+# 研究結果
+
+## Table: 1 Sample Design and Response Rate
+
+```{r echo = F, warning=F, message=F}
+data_survey_response %>%
+  select(-1) %>%
+  mutate(
+    rate_all = all / max(all),
+    rate_nj = nj / max(nj),
+    rate_pa = pa / max(pa)
+  ) %>%
+  select(vars, all, rate_all, nj, rate_nj, pa, rate_pa) %>%
+  mutate_at(.vars = names(.)[names(.) %like% "rate_"], ~ percent(., .1)) %>%
+  mutate_if(is.numeric, ~ comma(., 1)) %>%
+  mutate(
+    vars = ifelse(row_number() == 1, paste0(vars, footnote_marker_alphabet(1, "html")), vars),
+    vars = ifelse(row_number() == 7, paste0(vars, footnote_marker_alphabet(2, "html")), vars),
+    vars = ifelse(row_number() == 9, paste0(vars, footnote_marker_alphabet(3, "html")), vars)
+  ) %>%
+  kable(
+    escape = F,
+    align = "lrrrrrr",
+    col.names = c(" ", " ", "%", " ", "%", " ", "%")
+  ) %>%
+  kable_styling(full_width = F, c("hover", "condensed", "striped")) %>%
+  add_header_above(c(" " = 1, "所有樣本" = 2, "New Jersey" = 2, "Pennsylvania" = 2)) %>%
+  add_header_above(c(" " = 3, "餐廳位置（州）" = 4)) %>%
+  group_rows("前測\n1992/02/15 ~ 03/04", 1, 3, label_row_css = "background-color: #3CA6A6; color: #fff;") %>%
+  group_rows("後測\n1992/11/05 ~ 12/31", 4, 9, label_row_css = "background-color: #3CA6A6; color: #fff;") %>%
+  add_footnote(c(
+    "在收樣階段，有 29 間餐廳因為沒有電話而移除，目前的 473 間餐廳僅均為有電話者",
+    "後測時，各有一間餐廳分別因為：高速公路工程、火災暫時關閉",
+    "後測過程中，有 371 間餐廳為電話訪談、28 間因為拒絕電訪而採用實體訪問"
+  ))
+```
+
+## Table 2: Means of Key Variables
+
+```{r echo = F, warning=F, message=F}
+data_summary_table_2_1 <- data_survey %>%
+  select(sheet, state, chain, co_owned) %>%
+  data.table() %>%
+  melt(id.vars = c("sheet", "state")) %>%
+  dcast(sheet + state ~ variable + value, fun.aggregate = function(x) length(x) > 0, ",") %>%
+  melt(id.vars = c("sheet", "state")) %>%
+  rowwise() %>%
+  mutate(variable = stringr::str_split(string = variable, pattern = ",", n = 2) %>% .[[1]] %>% setNames(., c("variable", "class")) %>% list()) %>%
+  tidyr::unnest_wider(c("variable")) %>%
+  group_by(state, variable, class) %>%
+  summarise(
+    x = n(),
+    n = value %>% sum(),
+    mean = value %>% mean(na.rm = T),
+    se = value %>% plotrix::std.error(na.rm = T),
+    sd = value %>% sd(na.rm = T)
+  ) %>%
+  ungroup() %>%
+  data.table() %>%
+  dcast(variable + class ~ state, value.var = c("n", "x", "mean", "se", "sd")) %>%
+  arrange(variable, class) %>%
+  rowwise() %>%
+  mutate(test = BSDA::tsum.test(s.x = sd_NJ, n.x = x_NJ, mean.x = mean_NJ, s.y = sd_PA, n.y = x_PA, mean.y = mean_PA)[c("statistic", "p.value")] %>% list()) %>%
+  tidyr::unnest_wider("test") %>%
+  select(variable, class, n_NJ, mean_NJ, n_PA, mean_PA, statistic, p.value)
+
+data_summary_table_2_1 %>%
+  select(-variable) %>%
+  mutate_at(.vars = c("n_NJ", "n_PA"), ~ comma(., 1)) %>%
+  mutate_at(.vars = c("mean_NJ", "mean_PA"), ~ percent(., .1)) %>%
+  mutate_at(.vars = c("statistic"), ~ comma(., .01)) %>%
+  mutate_at(.vars = c("p.value"), ~ comma(., .001)) %>%
+  mutate(class = class %>% forcats::fct_recode("直營店" = "Company-owned", "加盟店" = "Not company-owned")) %>%
+  kable(
+    align = "lrrrrrr",
+    col.names = c("特徵", "樣本數", "%", "樣本數", "%", "t value", "p value")
+  ) %>%
+  kable_styling(full_width = F, c("hover", "condensed", "striped")) %>%
+  add_header_above(c(" " = 1, "New Jersey" = 2, "Pennsylvania" = 2, "Test of equality\nof means" = 2)) %>%
+  add_header_above(c(" " = 1, "餐廳位置（州）" = 4, " " = 2)) %>%
+  group_rows("餐廳類型", 1, 4, label_row_css = "background-color: #3CA6A6; color: #fff;") %>%
+  group_rows("直營/加盟", 5, 6, label_row_css = "background-color: #3CA6A6; color: #fff;")
+```
+
+
+```{r echo = F, warning=F, message=F}
+data_summary_table_2_2 <- data_survey %>%
+  select(
+    state,
+    fte, rate_empft, wage_st, rate_wage_425, pofm, hrsopen, rate_bonus,
+    fte2, rate_empft2, wage_st2, rate_wage_4252, rate_wage_5052, pofm2, hrsopen2, rate_bonus2
+  ) %>%
+  data.table() %>%
+  melt(id.vars = "state") %>%
+  filter(!is.na(value)) %>%
+  mutate(
+    wave = (variable %like% "2$") %>% factor(., c(F, T), c("1", "2")),
+    variable = variable %>% stringr::str_remove_all(., "2$")
+  ) %>%
+  group_by(wave, state, variable) %>%
+  summarise(
+    x = n(),
+    mean = value %>% mean(na.rm = T),
+    se = value %>% plotrix::std.error(na.rm = T),
+    sd = value %>% sd(na.rm = T),
+  ) %>%
+  data.table() %>%
+  dcast(wave + variable ~ state, value.var = c("x", "mean", "se", "sd")) %>%
+  mutate(variable = variable %>% factor(
+    ., c("fte", "rate_empft", "wage_st", "rate_wage_425", "rate_wage_505", "pofm", "hrsopen", "rate_bonus"),
+    c("全職人力工時 FTE", "正職人數 / FTE %", "起薪", "薪資 = $4.25 %", "薪資 = $5.05 %", "套餐金額", "營業時長", "招聘獎金 %")
+  )) %>%
+  arrange(wave, variable) %>%
+  rowwise() %>%
+  mutate(test = BSDA::tsum.test(s.x = sd_NJ, n.x = x_NJ, mean.x = mean_NJ, s.y = sd_PA, n.y = x_PA, mean.y = mean_PA)[c("statistic", "p.value")] %>% list()) %>%
+  tidyr::unnest_wider("test") %>%
+  select(variable, x_NJ, mean_NJ, se_NJ, x_PA, mean_PA, se_PA, statistic, p.value)
+
+data_summary_table_2_2 %>%
+  mutate_if(is.integer, ~ comma(., 1)) %>%
+  mutate_if(is.numeric, ~ comma(., .01)) %>%
+  kable(
+    align = "lrrrrrr",
+    col.names = c("特徵", "樣本數", "平均值", "標準誤", "樣本數", "平均值", "標準誤", "t value", "p value")
+  ) %>%
+  kable_styling(full_width = F, c("hover", "condensed", "striped")) %>%
+  add_header_above(c(" " = 1, "New Jersey" = 3, "Pennsylvania" = 3, "Test of equality\nof means" = 2)) %>%
+  add_header_above(c(" " = 1, "餐廳位置（州）" = 6, " " = 2)) %>%
+  group_rows("前測\n1992/02/15 ~ 03/04", 1, 7, label_row_css = "background-color: #3CA6A6; color: #fff;") %>%
+  group_rows("後測\n1992/11/05 ~ 12/31", 8, 15, label_row_css = "background-color: #3CA6A6; color: #fff;") %>%
+  row_spec(5, bold = T, color = "#3CA6A6")%>%
+  row_spec(10:13, bold = T, color = "#3CA6A6")
+```
