@@ -167,58 +167,58 @@ data_survey <- "data/survey.dat" %>%
     - 立法通過至生效時，紐澤西經濟開始衰退
 
 ```{r echo = F, warning=F, message=F}
-data_wage_unemployment %>%
-  filter(
-    state == "nj", index == "minimum wages",
-    date < "2006-01-01"
-  ) %>%
-  plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
-  add_lines() %>%
-  add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
-  add_annotations(
-    data = data_min_wage_change,
-    ax = ~x_start, x = ~x_end,
-    ay = ~y_start, y = ~y_end,
-    text = ~text,
-    xref = "x", yref = "y", axref = "x", ayref = "y",
-    showarrow = T, xanchor = "left"
-  ) %>%
-  layout(shapes = list(list(
-    type = "line", xref = "paper",
-    x0 = as.Date("1989-01-01"), x1 = as.Date("1989-01-01"),
-    y0 = 1, y1 = 5
-  )))
+# data_wage_unemployment %>%
+#   filter(
+#     state == "nj", index == "minimum wages",
+#     date < "2006-01-01"
+#   ) %>%
+#   plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
+#   add_lines() %>%
+#   add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
+#   add_annotations(
+#     data = data_min_wage_change,
+#     ax = ~x_start, x = ~x_end,
+#     ay = ~y_start, y = ~y_end,
+#     text = ~text,
+#     xref = "x", yref = "y", axref = "x", ayref = "y",
+#     showarrow = T, xanchor = "left"
+#   ) %>%
+#   layout(shapes = list(list(
+#     type = "line", xref = "paper",
+#     x0 = as.Date("1989-01-01"), x1 = as.Date("1989-01-01"),
+#     y0 = 1, y1 = 5
+#   )))
 ```
 
 
 ```{r echo = F, warning=F, message=F}
-subplot(data_wage_unemployment %>%
-  filter(state == "nj", index == "minimum wages") %>%
-  plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
-  add_lines() %>%
-  add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
-  add_annotations(
-    data = data_min_wage_change,
-    ax = ~x_start, x = ~x_end,
-    ay = ~y_start, y = ~y_end,
-    text = ~text,
-    xref = "x", yref = "y", axref = "x", ayref = "y",
-    showarrow = T, xanchor = "left"
-  ),
-data_wage_unemployment %>%
-  filter(state == "nj", index == "unemployment") %>%
-  plot_ly(data = ., x = ~date, y = ~value, name = "失業率") %>%
-  add_lines(),
-nrows = 2,
-shareX = TRUE
-) %>%
-  layout(
-    # hovermode = "x unified",
-    xaxis = list(
-      title = "Year",
-      rangeslider = list(type = "date")
-    )
-  )
+# subplot(data_wage_unemployment %>%
+#   filter(state == "nj", index == "minimum wages") %>%
+#   plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
+#   add_lines() %>%
+#   add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
+#   add_annotations(
+#     data = data_min_wage_change,
+#     ax = ~x_start, x = ~x_end,
+#     ay = ~y_start, y = ~y_end,
+#     text = ~text,
+#     xref = "x", yref = "y", axref = "x", ayref = "y",
+#     showarrow = T, xanchor = "left"
+#   ),
+# data_wage_unemployment %>%
+#   filter(state == "nj", index == "unemployment") %>%
+#   plot_ly(data = ., x = ~date, y = ~value, name = "失業率") %>%
+#   add_lines(),
+# nrows = 2,
+# shareX = TRUE
+# ) %>%
+#   layout(
+#     # hovermode = "x unified",
+#     xaxis = list(
+#       title = "Year",
+#       rangeslider = list(type = "date")
+#     )
+#   )
 ```
 
 
