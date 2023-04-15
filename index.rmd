@@ -25,9 +25,7 @@ suppressMessages({
   library(colorspace)
   library(plotly)
 })
-
 ```
-
 
 ```{r echo = F, warning=F, message=F}
 data_wage_unemployment <- rbind(
@@ -42,12 +40,25 @@ data_wage_unemployment <- rbind(
     mutate(state = "nj", index = "unemployment")
 )
 
+data_nj_mw <- data_wage_unemployment %>%
+  filter(date >= "1980-01-01", date <= "2000-12-31", state == "nj", index == "minimum wages") %>%
+  select(date, value)
+
+data_nj_ue <- data_wage_unemployment %>%
+  filter(date >= "1980-01-01", date <= "2000-12-31", state == "nj", index == "unemployment") %>%
+  select(date, value) %>%
+  mutate(value = value / 100)
+
 data_min_wage_change <- data.frame(
-  x_start = c("1989-11-01", "1991-01-01", "1993-01-01") %>% as.Date(),
-  x_end = c("1991-01-01", "1992-01-01", "1994-01-01") %>% as.Date(),
-  y_start = c(3.35, 3.80, 4.25),
-  y_end = c(3.80, 4.25, 5.05),
-  text = rep("", 3)
+  x = c("1990-01-01", "1991-01-01", "1993-01-01") %>% as.Date(),
+  y = c(3.35, 3.80, 4.25),
+  text = c("$ 3.35 > $ 3.80", "$ 3.80 > $ 4.25", "$ 4.25 > 5.05")
+)
+
+data_demand_supply <- rbind(
+  Hmisc::bezier(x = c(1, 8, 9), y = c(1, 5, 9)) %>% as.data.table() %>% mutate(type = "Supply"),
+  Hmisc::bezier(x = c(1, 8, 9), y = c(2, 6, 11)) %>% as.data.table() %>% mutate(type = "New Supply"),
+  Hmisc::bezier(x = c(1, 3, 9), y = c(9, 3, 1)) %>% as.data.table() %>% mutate(type = "Demand")
 )
 
 data_survey_response <- data.frame(
@@ -58,7 +69,7 @@ data_survey_response <- data.frame(
   pa = c(109, 30, 79, 79, 1, 0, 0, 0, 78)
 )
 
-data_survey <- "data/survey.dat" %>%
+data_survey <- "data/njmin/public.dat" %>%
   fread(col.names = c(
     "sheet", "chain", "co_owned", "state",
     "southj", "centralj", "northj", "pa1", "pa2", "shore",
@@ -110,135 +121,257 @@ data_survey <- "data/survey.dat" %>%
 
 # 摘要
 
-> ***評估基本工資調漲對就業市場的衝擊紐澤西與賓州速食店的案例研究***
+## 國內現況
 
-  - 1992 年 4 月 1 日紐澤西調漲基本工資
-  
-    - USD 4.25 ➜ USD 5.05
- 
-  - 資意味著「單位勞動力價格 ↑」，懷疑會造成
+### 基本工資調漲 4.56%
 
-    - 就業人口 ↓
-  
-    - 就業率 ↓
- 
-  - 評估「調漲基本工資對低工資的勞工就業人口的影響」
-  
+```         
+2023年1月1日起
+基本工資確定調漲為月薪26,400元
+時薪176元
+```
+
+![](https://i0.wp.com/blog.trendlink.com.tw/wp-content/uploads/2022/09/2023%E5%B9%B4%E5%9F%BA%E6%9C%AC%E5%B7%A5%E8%B3%87%E8%AA%BF%E6%BC%B2-%E6%9C%88%E8%96%AA26400-%E6%99%82%E6%96%B0176.jpg?resize=1024%252C513&ssl=1)
+
+### 基本工資連續七年調漲
+
+```         
+2023 年調薪後
+最直接的影響就是勞健保和勞退金
+(領基本工資者)
+對企業雇主來說成本增加 5.41%
+```
+
+![](https://i0.wp.com/blog.trendlink.com.tw/wp-content/uploads/2022/09/2023%E5%B9%B4%E5%9F%BA%E6%9C%AC%E5%B7%A5%E8%B3%87%E8%AA%BF%E6%BC%B2-%E9%80%A3%E7%BA%8C%E4%B8%83%E5%B9%B4%E8%AA%BF%E6%BC%B2%E5%9F%BA%E6%9C%AC%E5%B7%A5%E8%B3%87.jpg?resize=1024%252C1024&ssl=1)
+
+## 人事成本變高，那就少用點人吧
+
+```{r echo = F, warning=F, message=F}
+# plot_demand_supply = data_demand_supply %>%
+#   plot_ly(data = .) %>%
+#   add_trace(x = ~x, y = ~y, color = ~type, type = "scatter", mode = "lines") %>%
+#   add_annotations(
+#     ax = c(2, 4.7, 1, 9),
+#     x = c(2, 4.04, 1, 8.35),
+#     ay = c(3.42, 2, 1, 9),
+#     y = c(3.96, 2, 2, 9),
+#     text = c(""),
+#     xref = "x",
+#     yref = "y",
+#     axref = "x",
+#     ayref = "y",
+#     arrowcolor = "red",
+#     showarrow = TRUE
+#   ) %>%
+#   add_annotations(
+#     x = c(4.7, 4.04),
+#     y = c(3.42, 3.96),
+#     text = c("均衡點 1", "均衡點 2"),
+#     xref = "x",
+#     yref = "y",
+#     showarrow = TRUE,
+#     arrowhead = 7,
+#     ax = c(60, -40),
+#     ay = c(0, -40)
+#   ) %>%
+#   layout(
+#     yaxis = list(
+#       title = "Price",
+#       tickvals = list(2, 4, 6, 8, 10),
+#       tickformat = ".0f"
+#     ),
+#     xaxis = list(
+#       title = "Quantity",
+#       tickvals = list(2, 4, 6, 8, 10),
+#       tickformat = ".0f"
+#     ),
+#     legend = list(
+#       title = "Index",
+#       x = 0.5,
+#       y = 1,
+#       orientation = "h",
+#       xanchor = "center"
+#     ),
+#     hovermode = "x unified",
+#     margin = list(
+#       l = 50,
+#       r = 50,
+#       b = 50,
+#       t = 50,
+#       pad = 4
+#     ),
+#     shapes = list(
+#       list(type = "line", x0 = 4.7, x1 = 4.7, y0 = 1, y1 = 3.42, line = list(color = "gray20", dash = "dot", width = 1)),
+#       list(type = "line", x0 = 1, x1 = 4.7, y0 = 3.42, y1 = 3.42, line = list(color = "gray20", dash = "dot", width = 1)),
+#       list(type = "line", x0 = 4.04, x1 = 4.04, y0 = 1, y1 = 3.96, line = list(color = "gray20", dash = "dot", width = 1)),
+#       list(type = "line", x0 = 1, x1 = 4.04, y0 = 3.96, y1 = 3.96, line = list(color = "gray20", dash = "dot", width = 1))
+#     )
+#   )
+# 
+# api_create(plot_demand_supply, filename = "minimum_wages_and_employment_in_nj_plot_demand_supply")
+
+
+knitr::include_url("https:////plotly.com/~seimwiwa/15.embed")
+```
+
+## 基本工資的增加，真的會造成僱員數量減少（失業率增加）嗎？
+
+```         
+評估基本工資調漲對就業市場的衝擊
+紐澤西與賓州速食店的案例研究
+```
+
+-   1992 年初紐澤西調漲基本工資
+
+    -   由每小時 USD 4.25 提高至 USD 5.05
+
+-   當「單位勞動力價格 ↑」，可能會造成
+
+    -   就業人口 ↓
+
+    -   就業率 ↓
+
+-   因此，經濟學家想要評估「調漲基本工資對低工資的勞工就業人口的影響」
+
 ## 本文資訊
 
- - Author: David Card and Alan B. Krueger
- 
- - Publish date: October 1993
- 
- - Publish at: National Bureau of Economic Research Working Paper Series
+-   Author: David Card and Alan B. Krueger
 
- - DOI: 10.3386/w4509
- 
- - [WEB Page](https://www.nber.org/papers/w4509)
+-   Publish date: October 1993
 
- - [PDF](https://www.nber.org/system/files/working_papers/w4509/w4509.pdf)
- 
+-   Publish at: National Bureau of Economic Research Working Paper Series
+
+-   DOI: 10.3386/w4509
+
+-   [WEB Page](https://www.nber.org/papers/w4509)
+
+-   [PDF](https://www.nber.org/system/files/working_papers/w4509/w4509.pdf)
+
 ## 其他參考資訊
 
-  - [FRED - State Minimum Wage Rate for New Jersey](https://fred.stlouisfed.org/series/STTMINWGNJ)
-  
-  - [FRED - Unemployment Rate in New Jersey](https://fred.stlouisfed.org/series/NJURN)
-  
-  - [David Card - Dataset](https://davidcard.berkeley.edu/data_sets.html)
-  
-  - [GitHub / alopatina / Applied-Causal-Analysis](https://github.com/alopatina/Applied-Causal-Analysis)
-  
-  - [GitHub / BiomedSciAI / causallib](https://github.com/alopatina/Applied-Causal-Analysis)
-  
-  - [GitHub / dnackat / data-analysis-for-social-scientists-mitx](https://github.com/dnackat/data-analysis-for-social-scientists-mitx/blob/master/Homeworks/HW9/hw9.R)
+-   [FRED - State Minimum Wage Rate for New Jersey](https://fred.stlouisfed.org/series/STTMINWGNJ)
+
+-   [FRED - Unemployment Rate in New Jersey](https://fred.stlouisfed.org/series/NJURN)
+
+-   [David Card - Dataset](https://davidcard.berkeley.edu/data_sets.html)
+
+-   [GitHub / alopatina / Applied-Causal-Analysis](https://github.com/alopatina/Applied-Causal-Analysis)
+
+-   [GitHub / BiomedSciAI / causallib](https://github.com/alopatina/Applied-Causal-Analysis)
+
+-   [GitHub / dnackat / data-analysis-for-social-scientists-mitx](https://github.com/dnackat/data-analysis-for-social-scientists-mitx/blob/master/Homeworks/HW9/hw9.R)
+
+-   [Create supply and demand economics curves with ggplot2](https://www.andrewheiss.com/blog/2017/09/15/create-supply-and-demand-economics-curves-with-ggplot2/)
+
+\-[2023年(112年)基本工資調漲，企業注意事項總整理！](https://blog.trendlink.com.tw/2022/09/2023-basic-wage/)
 
 # 研究背景
 
 ## 紐澤西的就業政策與時空背景
 
-  - 1989 / 11 立法調漲基本工資 USD 3.35 ➜ USD 3.80
-  
-  - 1989 / 04  再次立法調漲基本工資 ➜ USD 4.25 
-  
-  - 1992 / 04  紐澤西州立法 ➜ USD 5.05
-  
-    - 全美最低工資最高的州，遭強烈反對
-    
-    - 立法通過至生效時，紐澤西經濟開始衰退
+-   1989 年底紐澤西州立法調漲基本工資 USD 3.35 ➜ USD 3.80
+
+-   1990 年初再次立法調漲基本工資 ➜ USD 4.25
+
+-   1992 年初第三次立法調漲基本工資 ➜ USD 5.05
 
 ```{r echo = F, warning=F, message=F}
-# data_wage_unemployment %>%
-#   filter(
-#     state == "nj", index == "minimum wages",
-#     date < "2006-01-01"
+# plot_minwage_unemployment = plot_ly() %>%
+#   add_trace(
+#     name = "Min. Wage $",
+#     data = data_nj_mw,
+#     x = ~date,
+#     y = ~value,
+#     mode = "lines+marker",
+#     type = "scatter",
+#     line = list(
+#       color = "rgb(217, 105, 65)",
+#       dash = "dashed",
+#       width = 1
+#     )
 #   ) %>%
-#   plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
-#   add_lines() %>%
-#   add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
-#   add_annotations(
-#     data = data_min_wage_change,
-#     ax = ~x_start, x = ~x_end,
-#     ay = ~y_start, y = ~y_end,
-#     text = ~text,
-#     xref = "x", yref = "y", axref = "x", ayref = "y",
-#     showarrow = T, xanchor = "left"
+#   add_trace(
+#     name = "Unemployment %",
+#     data = data_nj_ue,
+#     x = ~date,
+#     y = ~value,
+#     mode = "lines",
+#     type = "scatter",
+#     yaxis = "y2",
+#     line = list(
+#       color = "rgb(46, 89, 2)",
+#       dash = "dashed",
+#       width = 1
+#     )
 #   ) %>%
-#   layout(shapes = list(list(
-#     type = "line", xref = "paper",
-#     x0 = as.Date("1989-01-01"), x1 = as.Date("1989-01-01"),
-#     y0 = 1, y1 = 5
-#   )))
-```
-
-
-```{r echo = F, warning=F, message=F}
-# subplot(data_wage_unemployment %>%
-#   filter(state == "nj", index == "minimum wages") %>%
-#   plot_ly(data = ., x = ~date, y = ~value, name = "基本工資") %>%
-#   add_lines() %>%
-#   add_markers(data = data_min_wage_change, x = ~x_end, y = ~y_end) %>%
-#   add_annotations(
-#     data = data_min_wage_change,
-#     ax = ~x_start, x = ~x_end,
-#     ay = ~y_start, y = ~y_end,
-#     text = ~text,
-#     xref = "x", yref = "y", axref = "x", ayref = "y",
-#     showarrow = T, xanchor = "left"
-#   ),
-# data_wage_unemployment %>%
-#   filter(state == "nj", index == "unemployment") %>%
-#   plot_ly(data = ., x = ~date, y = ~value, name = "失業率") %>%
-#   add_lines(),
-# nrows = 2,
-# shareX = TRUE
-# ) %>%
 #   layout(
-#     # hovermode = "x unified",
+#     yaxis = list(
+#       title = "Min. Wage $",
+#       side = "left",
+#       range = c(2.5, 6),
+#       tickvals = list(2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6)
+#     ),
+#     yaxis2 = list(
+#       title = "Unemployment %",
+#       overlaying = "y",
+#       side = "right",
+#       range = c(.03, .1),
+#       tickformat = ".0%"
+#     ),
 #     xaxis = list(
-#       title = "Year",
-#       rangeslider = list(type = "date")
+#       rangeslider = list(type = "date"),
+#       title = ""
+#     ),
+#     legend = list(
+#       title = "Index",
+#       x = 0.5,
+#       y = 1,
+#       orientation = "h",
+#       xanchor = "center"
+#     ),
+#     hovermode = "x unified",
+#     margin = list(
+#       l = 50,
+#       r = 50,
+#       b = 25,
+#       t = 25,
+#       pad = 4
+#     ),
+#     annotations = list(
+#       x = data_min_wage_change$x,
+#       y = data_min_wage_change$y,
+#       text = data_min_wage_change$text,
+#       xref = "x",
+#       yref = "y",
+#       showarrow = TRUE,
+#       arrowhead = 7,
+#       ax = -40,
+#       ay = -40
 #     )
 #   )
-```
+# 
+# api_create(plot_minwage_unemployment, filename = "minimum_wages_and_employment_in_nj_plot_minwage_unemployment")
 
+knitr::include_url("https:////plotly.com/~seimwiwa/17.embed")
+```
 
 # 研究方法
 
 ## 研究策略思考
 
-  - 直接想像：前後對照
-  
-    - 其實可以只看紐澤西速食店調漲前後的差異
-    
-    - 但無法避免「時間與季節性因素」的混淆
-    
-  - 其他可以利用的條件
-  
-    - 紐澤西有調漲基本工資、但隔壁的賓州沒有
-    
-    - 紐澤西是小州，經濟與附近各州有密切聯繫
-    
-    - 比較「紐澤西前後差異」、與「賓州前後差異」的差異，可以有效避開混淆
+-   直接想像：前後對照
+
+    -   其實可以只看紐澤西速食店調漲前後的差異
+
+    -   但無法避免「時間與季節性因素」的混淆
+
+-   其他可以利用的條件
+
+    -   紐澤西有調漲基本工資、但隔壁的賓州沒有
+
+    -   紐澤西是小州，經濟與附近各州有密切聯繫
+
+    -   比較「紐澤西前後差異」、與「賓州前後差異」的差異，可以有效避開混淆
 
 ## 研究類型
 
@@ -246,83 +379,83 @@ Prospective Cohort study with Fixed Population
 
 前瞻性固定人群的隊列研究
 
- - Prospective 前瞻性
- 
- - Cohort Study 隊列研究
- 
- - Fixed Population 固定人群
+-   Prospective 前瞻性
+
+-   Cohort Study 隊列研究
+
+-   Fixed Population 固定人群
 
 ## 名詞解釋
 
 ### Cohort Study
 
-  - 實驗性研究（RCT、A B test）以外最常用的兩種觀察性研究方法之一
-  
-  - 在⼀段時間內追踪特定族群（具有共同特徵或經歷）
-  
-  - 先找好幾群要觀察的人，隨著時間推移持續觀察他們的變化
-  
-  - 有時候稱：follow-up、longitudinal study 縱向研究
-  
+-   實驗性研究（RCT、A B test）以外最常用的兩種觀察性研究方法之一
+
+-   在⼀段時間內追踪特定族群（具有共同特徵或經歷）
+
+-   先找好幾群要觀察的人，隨著時間推移持續觀察他們的變化
+
+-   有時候稱：follow-up、longitudinal study 縱向研究
+
 ### Prospective Cohort Study
 
-  - 定義：先開始專案規劃選定人群後，事件才發生、數據才開始記錄
-  
-  - 操作：根據過去或當前的資料來進行分眾
-  
-  - 優勢：精確、麻煩、資訊少、偏差少
-  
-  - 劣勢：跟實驗一樣需等待、可能存在偏誤、與混淆因子
-    
-    - 可能的偏誤：Losses to Follow-Up、Healthy Worker Effect
-  
+-   定義：先開始專案規劃選定人群後，事件才發生、數據才開始記錄
+
+-   操作：根據過去或當前的資料來進行分眾
+
+-   優勢：精確、麻煩、資訊少、偏差少
+
+-   劣勢：跟實驗一樣需等待、可能存在偏誤、與混淆因子
+
+    -   可能的偏誤：Losses to Follow-Up、Healthy Worker Effect
+
 ### Fixed population 固定人群
 
-  - 依據特徵或暴露因子分組後，組別不會隨時間改變
-  
-  - 但參與分組的研究對象可能隨時間而失去聯繫 Losses to Follow-Up
-  
+-   依據特徵或暴露因子分組後，組別不會隨時間改變
+
+-   但參與分組的研究對象可能隨時間而失去聯繫 Losses to Follow-Up
+
 ## 研究時間
 
-  - planning: early 1992
-    
-  - 1st interview: 1992 年 2 ~ 3 月
-  
-    - 電訪
-    
-  - 2nd interview: 1992 年 11 ~ 12 月
-  
-    - 電訪 + 實地確認 Losses to Follow-Up
- 
+-   planning: early 1992
+
+-   1st interview: 1992 年 2 \~ 3 月
+
+    -   電訪
+
+-   2nd interview: 1992 年 11 \~ 12 月
+
+    -   電訪 + 實地確認 Losses to Follow-Up
+
 ## 研究對象
-    
-  - subject: 速食店
-    
-    - 低薪者多，低薪者中 25% 在速食店工作
-      
-    - 速食店都只給基本工資，所以會需要跟進調漲薪資
-      
-    - 速食店工作和產品同值性高，容易取得可靠就業、工資、產品數據、沒有小費（減少薪資衡量困難）
-      
-    - 速食店是需要特許經營，選樣本相對容易
-      
-    - 過去經驗表明速食店對電話訪談的回覆意願高
+
+-   subject: 速食店
+
+    -   低薪者多，低薪者中 25% 在速食店工作
+
+    -   速食店都只給基本工資，所以會需要跟進調漲薪資
+
+    -   速食店工作和產品同值性高，容易取得可靠就業、工資、產品數據、沒有小費（減少薪資衡量困難）
+
+    -   速食店是需要特許經營，選樣本相對容易
+
+    -   過去經驗表明速食店對電話訪談的回覆意願高
 
 ## 暴露因子與結果
-  
-  - outcome: 員工數量改變
-  
-  - exposure / treatment: 基本工資由 4.25 -> 5.05, 1992, Apr., NJ
-    
-    - exp group: 會調漲基本工資的紐澤西，n = 364
-      
-    - non-exp group: 不會調漲基本工資的賓州，n = 109
+
+-   outcome: 員工數量改變
+
+-   exposure / treatment: 基本工資由 4.25 -\> 5.05, 1992, Apr., NJ
+
+    -   exp group: 會調漲基本工資的紐澤西，n = 364
+
+    -   non-exp group: 不會調漲基本工資的賓州，n = 109
 
 ## 統計方法
 
-  1. T-statistic for test of equality of means
-  
-  2. Linear regression
+1.  T-statistic for test of equality of means
+
+2.  Linear regression
 
 # 研究結果
 
@@ -408,7 +541,6 @@ data_summary_table_2_1 %>%
   group_rows("直營/加盟", 5, 6, label_row_css = "background-color: #3CA6A6; color: #fff;")
 ```
 
-
 ```{r echo = F, warning=F, message=F}
 data_summary_table_2_2 <- data_survey %>%
   select(
@@ -454,6 +586,6 @@ data_summary_table_2_2 %>%
   add_header_above(c(" " = 1, "餐廳位置（州）" = 6, " " = 2)) %>%
   group_rows("前測\n1992/02/15 ~ 03/04", 1, 7, label_row_css = "background-color: #3CA6A6; color: #fff;") %>%
   group_rows("後測\n1992/11/05 ~ 12/31", 8, 15, label_row_css = "background-color: #3CA6A6; color: #fff;") %>%
-  row_spec(5, bold = T, color = "#3CA6A6")%>%
+  row_spec(5, bold = T, color = "#3CA6A6") %>%
   row_spec(10:13, bold = T, color = "#3CA6A6")
 ```
