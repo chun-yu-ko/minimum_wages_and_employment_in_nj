@@ -4,6 +4,7 @@ author: Chun Yu, Ko
 date: Feburary 27, 2023
 output:
   html_document:
+    theme: cosmo
     toc: true
     number_sections: true
     toc_depth: 2
@@ -110,8 +111,20 @@ data_survey <- "data/njmin/public.dat" %>%
     pofm = psoda + pfry + pentree,
     pofm2 = psoda2 + pfry2 + pentree2,
     dfte = fte2 - fte,
+    dfte_temp = case_when(status2 %in% c("closed due to Mall fire", "closed for renovations", "closed for highway construction") ~ 0,
+                          T ~ dfte),
     dwage = wage_st2 - wage_st,
-    dpofm = pofm2 - pofm
+    dpofm = pofm2 - pofm,
+    pchempc = ifelse(fte2 == 0, -1, (fte2 - fte) / (fte2 + fte)),
+    gap = case_when(state == "PA" ~ 0,
+                    wage_st >= 5.05 ~ 0,
+                    wage_st > 0 ~ (5.05 - wage_st) / wage_st,
+                    T ~ NA),
+    icode = case_when(state == "PA" ~ "pa",
+                      state == "NJ" & wage_st == 4.25 ~ "l",
+                      state == "NJ" & wage_st >= 5.00 ~ "h",
+                      state == "NJ" & between(wage_st, 4.25, 5.00) ~ "m",
+                      T ~ "b")
   ) %>%
   mutate_at(.vars = c("rate_wage_425", "rate_wage_4252", "rate_wage_5052", "rate_bonus", "rate_bonus2"), ~ ifelse(is.na(.), 0, .)) %>%
   mutate_at(.vars = c("rate_empft", "rate_empft2", "rate_wage_425", "rate_wage_4252", "rate_wage_5052", "rate_bonus", "rate_bonus2"), ~ as.numeric(.) * 100) %>%
@@ -263,7 +276,11 @@ knitr::include_url("https:////plotly.com/~seimwiwa/15.embed")
 
 -   [Create supply and demand economics curves with ggplot2](https://www.andrewheiss.com/blog/2017/09/15/create-supply-and-demand-economics-curves-with-ggplot2/)
 
-\-[2023年(112年)基本工資調漲，企業注意事項總整理！](https://blog.trendlink.com.tw/2022/09/2023-basic-wage/)
+-   [2023年(112年)基本工資調漲，企業注意事項總整理！](https://blog.trendlink.com.tw/2022/09/2023-basic-wage/)
+
+-   [Standard error of the difference between means](https://rpubs.com/brouwern/SEdiff2means)
+
+-   [5. Differences between means: type I and type II errors and power](https://www.bmj.com/about-bmj/resources-readers/publications/statistics-square-one/5-differences-between-means-type-i-an)
 
 # 研究背景
 
@@ -461,6 +478,12 @@ Prospective Cohort study with Fixed Population
 
 ## Table: 1 Sample Design and Response Rate
 
+-   確認收樣的概況
+
+-   並清楚說明 loss to follow-up 的原因：有時 loss to follow-up 受 exposure 影響，所以必須確認兩者無關
+
+![](table_1.png)
+
 ```{r echo = F, warning=F, message=F}
 data_survey_response %>%
   select(-1) %>%
@@ -495,6 +518,12 @@ data_survey_response %>%
 ```
 
 ## Table 2: Means of Key Variables
+
+-   比較兩個 Cohort 的差異，如果基本特徵就有差異，那後續 Cohort 的 outcome 不一樣可能受到其他因素干擾，就無法驗證其他假設
+
+-   比較平均數，也就是分別把 NJ 跟 PA 的數據計算出估計值、與標準誤；因為餐廳類型、直營/加盟是類別變項，原文是將其視為不同的特徵（欄位），其值均為 1 或 0
+
+![](table_2.png)
 
 ```{r echo = F, warning=F, message=F}
 data_summary_table_2_1 <- data_survey %>%
@@ -589,3 +618,238 @@ data_summary_table_2_2 %>%
   row_spec(5, bold = T, color = "#3CA6A6") %>%
   row_spec(10:13, bold = T, color = "#3CA6A6")
 ```
+
+## Figure 1: Distribution of Starting Wage Rates
+
+![](figure_1.png)
+
+```{r echo = F, warning=F, message=F}
+data_survey%>%
+  select(state, wage_st, wage_st2)%>%
+  data.table%>%
+  melt(id.vars = "state")%>%
+  mutate(state = state%>%factor(., c("NJ", "PA"), c("New Jersey", "Pennsylvania")),
+         variable = variable %>%factor(., c("wage_st", "wage_st2"), c("Feb. 1992", "Nov. 1992")))%>%
+  filter(value%>%is.na() == F)%>%
+  ggplot(aes(x = value, y = (..count..)/sum(..count..), fill = state))+
+  geom_bar(position = position_dodge(), width = .05, alpha = .8)+
+  scale_x_continuous(n.breaks = 10, labels = comma_format(prefix = "$ "))+
+  scale_y_continuous(labels = percent_format())+
+  scale_fill_discrete_diverging("Berlin")+
+  facet_wrap(~variable, scales = "free", ncol = 1)+
+  theme_fivethirtyeight()+
+  theme(legend.title = element_blank())  
+```
+
+## Table 3: Average Employment Per Store Before and After the Rise in New Jersey Minimum Wage
+
+-   比較兩週前測、後測，以及兩次測量的差異
+
+-   兩次測量的差異有三種計算方法，原則上都在估計同樣的母體參數，不應該差異很大
+
+    -   平均值直接相減，標準誤可以由此計算:
+
+        -   $EF(difference) = \sqrt{(SD_1^2/N_1 + SD_2^2/N_2)}$
+
+    -   計算每組樣本前後差異，取平均並計算標準誤差
+
+        -   此處計算的標準誤與文獻略有差異
+
+    -   將歇業的 4 間餐廳的 FTE 設置為 0，計算每組樣本前後差異，取平均並計算標準誤差
+
+        -   此處計算的標準誤與文獻略有差異
+
+![](table_3.png)
+
+```{r echo = F, warning=F, message=F}
+
+f_se_diff <- function(n_1, n_2, sd_1, sd_2){
+  sqrt((((sd_1^2)/n_1) + ((sd_2^2)/n_2)))
+}
+
+data_summary_table_3_1 = data_survey%>%
+  select(state, fte, fte2, dfte, dfte_temp)%>%
+  data.table()%>%
+  melt(id.vars = "state")%>%
+  group_by(state, variable)%>%
+  summarise(mean = value%>%mean(na.rm=T),
+            n = value%>%na.omit%>%length(),
+            sd = value%>%sd(na.rm=T),
+            se = value %>% plotrix::std.error(na.rm = T))%>%
+  data.table%>%
+  dcast(variable ~ state, value.var = c("mean", "sd", "se", "n"))%>%
+  mutate(mean_NJ_PA = mean_NJ - mean_PA,
+         se_NJ_PA = f_se_diff(n_PA, n_PA, sd_PA, sd_PA),
+         n_NL_PA = n_PA + n_NJ - 2)%>%
+  add_row(variable = "fte2-fte",
+          mean_PA = .$mean_PA[2] - .$mean_PA[1],
+          mean_NJ = .$mean_NJ[2] - .$mean_NJ[1],
+          se_PA = f_se_diff(.$n_PA[2], .$n_PA[1], .$sd_PA[2], .$sd_PA[1]),
+          se_NJ = f_se_diff(.$n_NJ[2], .$n_NJ[1], .$sd_NJ[2], .$sd_NJ[1]),
+          mean_NJ_PA = .$mean_NJ_PA[2] - .$mean_NJ_PA[1],
+          se_NJ_PA = f_se_diff(.$n_NL_PA[2], .$n_NL_PA[1], .$se_NJ_PA[2]*.$n_NL_PA[2]^0.5, .$se_NJ_PA[1]*.$n_NL_PA[1]^0.5))
+
+data_summary_table_3_2 = data_survey%>%
+  select(icode, fte, fte2, dfte, dfte_temp)%>%
+  filter(!icode %in% c("pa", "b"))%>%
+  data.table()%>%
+  melt(id.vars = "icode")%>%
+  group_by(icode, variable)%>%
+  summarise(mean = value%>%mean(na.rm=T),
+            n = value%>%na.omit%>%length(),
+            sd = value%>%sd(na.rm=T),
+            se = value %>% plotrix::std.error(na.rm = T))%>%
+  data.table%>%
+  dcast(variable ~ icode, value.var = c("mean", "sd", "se", "n"))%>%
+  mutate(mean_l_h = mean_l - mean_h,
+         se_l_h = f_se_diff(n_l, n_h, sd_l, sd_h),
+         n_l_h = n_l + n_h - 2,
+         mean_m_h = mean_m - mean_h,
+         se_m_h = f_se_diff(n_m, n_h, sd_m, sd_h),
+         n_m_h = n_m + n_h - 2)%>%
+  add_row(variable = "fte2-fte",
+          mean_l = .$mean_l[2] - .$mean_l[1],
+          mean_m = .$mean_m[2] - .$mean_m[1],
+          mean_h = .$mean_h[2] - .$mean_h[1],
+          mean_l_h = .$mean_l_h[2] - .$mean_l_h[1],
+          mean_m_h = .$mean_m_h[2] - .$mean_m_h[1],
+          se_l = f_se_diff(.$n_l[2], .$n_l[1], .$sd_l[2], .$sd_l[1]),
+          se_m = f_se_diff(.$n_m[2], .$n_m[1], .$sd_m[2], .$sd_m[1]),
+          se_h = f_se_diff(.$n_h[2], .$n_h[1], .$sd_h[2], .$sd_h[1]),
+          se_l_h = f_se_diff(.$n_l_h[2], .$n_l_h[1], .$se_l_h[2]*.$n_l_h[2]^0.5, .$se_l_h[1]*.$n_l_h[1]^0.5),
+          se_m_h = f_se_diff(.$n_m_h[2], .$n_m_h[1], .$se_m_h[2]*.$n_m_h[2]^0.5, .$se_m_h[1]*.$n_m_h[1]^0.5))
+  
+
+data_summary_table_3_1%>%
+  mutate_if(is.numeric, ~comma(., .01))%>%
+  mutate(pa = paste0(mean_PA, "(", se_PA, ")"),
+         nj = paste0(mean_NJ, "(", se_NJ, ")"),
+         pa_nj = paste0(mean_NJ_PA, "(", se_NJ_PA, ")"),
+         variable = variable %>% factor(., c("fte", "fte2", "fte2-fte", "dfte", "dfte_temp"), c("全職人力工時 FTE (前測)", "全職人力工時 FTE (後測)", "後測 - 前測 (平均值差)", "後測 - 前測 (樣本差)", "後測 - 前測 (樣本差、調整暫時歇業)")))%>%
+  arrange(variable)%>%
+  select(variable, mean_PA, se_PA, mean_NJ, se_NJ, mean_NJ_PA, se_NJ_PA, mean_NJ_PA, se_NJ_PA)%>%
+  kable(
+    escape = T,
+    align = "lrrrrrr",
+    col.names = c("特徵", "平均值", "標準誤", "平均值", "標準誤", "平均值", "標準誤"))%>%
+  kable_styling(full_width = F, c("hover", "condensed", "striped"))%>%
+  add_header_above(c(" " = 1, "Pennsylvania" = 2, "New Jersey" = 2, "平均值差\nPA - NJ" = 2))
+
+
+data_summary_table_3_2%>%
+  mutate_if(is.numeric, ~comma(., .01))%>%
+  mutate(l = paste0(mean_l, "(", se_l, ")"),
+         m = paste0(mean_m, "(", se_m, ")"),
+         h = paste0(mean_h, "(", se_h, ")"),
+         l_h = paste0(mean_l_h, "(", se_l_h, ")"),
+         m_h = paste0(mean_m_h, "(", se_m_h, ")"),
+         variable = variable %>% factor(., c("fte", "fte2", "fte2-fte", "dfte", "dfte_temp"), c("全職人力工時 FTE (前測)", "全職人力工時 FTE (後測)", "後測 - 前測 (平均值差)", "後測 - 前測 (樣本差)", "後測 - 前測 (樣本差、調整暫時歇業)")))%>%
+  arrange(variable)%>%
+  select(variable, mean_l, se_l, mean_m, se_m, mean_h, se_h, mean_l_h, se_l_h, mean_m_h, se_m_h)%>%
+  kable(
+    escape = T,
+    align = "lrrrr",
+    col.names = c("特徵", "平均值", "標準誤", "平均值", "標準誤", "平均值", "標準誤", "平均值", "標準誤", "平均值", "標準誤"))%>%
+  kable_styling(full_width = F, c("hover", "condensed", "striped"))%>%
+add_header_above(c(" " = 1, "低\n4.25" = 2, "中\n4.26 ~ 4.99" = 2, "高\n >= 5.00" = 2, "平均值差\n低 - 高"=2, "平均值差\n中 - 高"=2))%>%
+  add_header_above(c(" "=1, "起薪" = 10))
+  
+```
+
+## Table 4: Reduced from Models for Change in Employment
+
+```         
+模型結果與「調升基本工資會減少就業人數」矛盾
+```
+
+-   Model 1: 若為紐澤西 FTE 差增加 2.75 [95% CI: 0.48 \~ 5.02]
+
+-   Model 2: 調整（控制）餐廳類型、直營/加盟時，若為紐澤西 FTE 差增加 2.78 [95% CI: 0.51 \~ 5.06]
+
+-   Model 3: 距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 16.36 [95% CI: 4.71 \~ 28.01]
+
+-   Model 4: 調整（控制）餐廳類型、直營/加盟時，距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 15.88 [95% CI: 3.99 \~ 27.76]
+
+-   Model 5: 調整（控制）餐廳類型、直營/加盟時、區域，距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 12.16 [95% CI: -2.22 \~ 26.55]
+
+-   無法證明下列模型有差異：
+
+    -   Model 1 vs Model 2
+
+    -   Model 4 vs Model 3
+
+    -   Model 5 vs Model 3
+
+![](table_4.png)
+
+```{r echo = F, warning=F, message=F}
+list_table_4 = c("state",
+                 "state + chain + co_owned",
+                 "gap",
+                 "gap + chain + co_owned",
+                 "gap + chain + co_owned + location")%>%
+  paste("dfte ~", .)%>%
+  sapply(., as.formula)%>%
+  lapply(., lm, data = data_survey)
+
+list_table_4%>%jtools::export_summs(digits = 2,
+                                    error_format = "[{conf.low}, {conf.high}]",
+                                    model.names = c("州", "州\n類型\n自營", "GAP", "GAP\n類型\n自營", "GAP\n類型\n自營\n區域"),
+                                    coefs = c("Intercept" = "(Intercept)",
+                                              "NJ" = "stateNJ",
+                                              "KFC" = "chainKFC",
+                                              "Roy's" = "chainRoy Rogers",
+                                              "Wendy's" = "chainWendy's",
+                                              "Company-owned" = "co_ownedCompany-owned",
+                                              "GAP" = "gap",
+                                              "Central, NJ" = "locationcentral NJ",
+                                              "Northern, NJ" = "locationnorthern NJ",
+                                              "Northeast suburbs of PA" = "locationPA, northeast suburbs of Phila",
+                                              "Easton etc, PA" = "locationPA, Easton etc"))
+
+anova(list_table_4[[2]], list_table_4[[1]])
+
+anova(list_table_4[[4]], list_table_4[[3]])
+
+anova(list_table_4[[5]], list_table_4[[3]])
+
+```
+
+## Table 5: Specification Tests of Reduced-form Employment Models
+
+用 FTE 不一定正確，為檢查上述模型的穩健程度分別使用下列幾種檢查方式替代 FTE
+
+1.  以原本的 FTE 作為計算前後差異
+2.  將四間暫停營業的 FTE 後測設為 0：驗證若不排除暫停營業的餐廳後測 FTE，而是直接計算為 0 是否會影響估計
+3.  在 FTE 中排除管理者：驗證若排除管理職是否會影響估計（想像整體沒有減員但一般職員數量下降）
+4.  調降工讀生在 FTE 中的權重至 0.4：驗證工讀生權重是否影響估計
+5.  調升工讀生在 FTE 中的權重至 0.6：驗證工讀生權重是否影響估計
+6.  排除 NJ Shore 近海區域：驗證排除近海（觀光景點）的影響
+7.  使用 FTE 但把後測的日期加入調整：驗證後測時間差對估計的影響
+8.  排除前測撥打兩通電話或以上者：驗證比較慢（或不願）受訪者移除後是否影響估計
+9.  加入前測員工數調整權重：假設存在 Heteroscedasticity 異方差性，用前測員工人數進行加權最小平方法的計算
+10. 僅使用 Newark 樣本：驗證只有市區的樣本
+11. 僅使用 Camden 樣本：驗證部分區域的樣本
+12. 使用 PA 樣本：排除 NJ 餐廳且（錯誤地）將 GAP 定義為將工資提高到每小時 5.05 美元所需的工資增長比例（遠本是 0 ）
+
+![](table_5.png)
+
+## Table 6: Effects of Minimum-Wage Increase on Other Outcomes
+
+比較其他餐廳特徵，差異都不太明憲
+
+![](table_6.png)
+
+## Table 7: Reduced-form Models for Change in the Price of a Full Meal
+
+-   檢查非經常性薪資的改變，因為餐廳可以用減少福利來抵消基本工資的影響
+
+-   NJ 和 PA 員工餐打折的比例都下降，但 NJ 更多
+
+-   但免費員工餐比例增加
+
+![](table_7.png)
+
+## Table 8: Estimated Effect of Minimum Wages on Numbers of Mcdonald's Restaurants, 1986-1991
+
+![](table_8.png)
