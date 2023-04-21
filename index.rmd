@@ -853,3 +853,37 @@ anova(list_table_4[[5]], list_table_4[[3]])
 ## Table 8: Estimated Effect of Minimum Wages on Numbers of Mcdonald's Restaurants, 1986-1991
 
 ![](table_8.png)
+
+# 研究評論
+
+1.  **資料收集**
+
+    1.  背景目標
+
+    2.  研究因素
+
+    3.  關鍵指標
+
+    4.  研究類型
+
+    5.  分母分子
+
+    6.  研究對象的偏誤
+
+2.  **數據分析**
+
+    1.  避免混淆
+
+    2.  關聯性與統計方法
+
+3.  **理解與應用**
+
+    1.  主要結果
+
+    2.  偏誤與混淆對研究的影響
+
+    3.  局限性
+
+    4.  結論合理性
+
+    5.  適用人群
