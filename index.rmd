@@ -138,26 +138,32 @@ data_survey <- "data/njmin/public.dat" %>%
 
 ### 基本工資調漲 4.56%
 
-```         
-2023年1月1日起
-基本工資確定調漲為月薪26,400元
-時薪176元
-```
+> 2023 年 1 月 1 日起
+>
+> 基本工資確定調漲為月薪 26,400 元、時薪 176 元
 
 ![](https://i0.wp.com/blog.trendlink.com.tw/wp-content/uploads/2022/09/2023%E5%B9%B4%E5%9F%BA%E6%9C%AC%E5%B7%A5%E8%B3%87%E8%AA%BF%E6%BC%B2-%E6%9C%88%E8%96%AA26400-%E6%99%82%E6%96%B0176.jpg?resize=1024%252C513&ssl=1)
 
 ### 基本工資連續七年調漲
 
-```         
-2023 年調薪後
-最直接的影響就是勞健保和勞退金
+> 2023 年調薪後
+最直接的影響就是
+>
+> 勞健保和勞退金
 (領基本工資者)
+>
+> 
 對企業雇主來說成本增加 5.41%
-```
 
 ![](https://i0.wp.com/blog.trendlink.com.tw/wp-content/uploads/2022/09/2023%E5%B9%B4%E5%9F%BA%E6%9C%AC%E5%B7%A5%E8%B3%87%E8%AA%BF%E6%BC%B2-%E9%80%A3%E7%BA%8C%E4%B8%83%E5%B9%B4%E8%AA%BF%E6%BC%B2%E5%9F%BA%E6%9C%AC%E5%B7%A5%E8%B3%87.jpg?resize=1024%252C1024&ssl=1)
 
 ## 人事成本變高，那就少用點人吧
+
+> 資方角度是如果人事成本增加：
+>
+> 減少員工數量穩定支出
+>
+> 轉嫁成本到消費者身上
 
 ```{r echo = F, warning=F, message=F}
 # plot_demand_supply = data_demand_supply %>%
@@ -229,10 +235,10 @@ knitr::include_url("https:////plotly.com/~seimwiwa/15.embed")
 
 ## 基本工資的增加，真的會造成僱員數量減少（失業率增加）嗎？
 
-```         
-評估基本工資調漲對就業市場的衝擊
+> 評估基本工資調漲對就業市場的衝擊
+>
+> 
 紐澤西與賓州速食店的案例研究
-```
 
 -   1992 年初紐澤西調漲基本工資
 
@@ -478,9 +484,13 @@ Prospective Cohort study with Fixed Population
 
 ## Table: 1 Sample Design and Response Rate
 
--   確認收樣的概況
+-   確認收樣概況
 
--   並清楚說明 loss to follow-up 的原因：有時 loss to follow-up 受 exposure 影響，所以必須確認兩者無關
+> 說明 loss to follow-up 的原因、解釋 loss to follow-up 不受 exposure 影響
+>
+> 如果沒有收集到樣本的原因與基本工資調漲有關
+> 例如因為調漲後不願意聘僱更多勞工、沒有時間受訪
+> 那最後獲得的樣本會「沒有受到衝擊且有時間受訪」，則無可比性
 
 ![](table_1.png)
 
@@ -519,9 +529,19 @@ data_survey_response %>%
 
 ## Table 2: Means of Key Variables
 
--   比較兩個 Cohort 的差異，如果基本特徵就有差異，那後續 Cohort 的 outcome 不一樣可能受到其他因素干擾，就無法驗證其他假設
+-   確認樣本特徵一致性
 
--   比較平均數，也就是分別把 NJ 跟 PA 的數據計算出估計值、與標準誤；因為餐廳類型、直營/加盟是類別變項，原文是將其視為不同的特徵（欄位），其值均為 1 或 0
+-   全職人力工時 FTE = 管理職 + 基層人數 + 工讀人數 \* 0.5
+
+> 如果基本特徵就有差異，那後續的 outcome 不一樣，可能受到基本特徵影響，無法驗證其他假設
+>
+> 如果 NJ 餐廳都是超高檔連鎖品牌，抗風險能力好，而 PA 都是街邊美食、抗風險能億差，則比較無意義
+>
+> FTE：工讀生不會上整天班，所以只當 0.5 人
+>
+> 比較平均數：分別把 NJ 跟 PA 的數據計算出估計值、與標準誤
+>
+> 因為餐廳類型、直營/加盟是類別變項，原文是將其視為不同的特徵（欄位），其值均為 1 或 0
 
 ![](table_2.png)
 
@@ -621,6 +641,17 @@ data_summary_table_2_2 %>%
 
 ## Figure 1: Distribution of Starting Wage Rates
 
+-   確認 Compliance 程度
+
+> 研究以及法規都要求必須調漲基本工資
+>
+> 
+但也有可能有餐廳不願意調漲
+>
+> 所以應該檢查 Compliance 程度
+>
+> 對於有 Compliance 問題的研究應該衡量是否以其他方式處理
+
 ![](figure_1.png)
 
 ```{r echo = F, warning=F, message=F}
@@ -658,6 +689,17 @@ data_survey%>%
     -   將歇業的 4 間餐廳的 FTE 設置為 0，計算每組樣本前後差異，取平均並計算標準誤差
 
         -   此處計算的標準誤與文獻略有差異
+
+> 整理各群體各個指標的估計值並比較差異
+>
+> 
+研究主軸是 PA vs NJ
+>
+> 但 NJ 樣本中也有原本就滿足調漲後薪資的餐廳
+>
+> 所以分成低中高進行比較
+>
+> 假設原本就滿足調漲後基本工資者員工數應無變化
 
 ![](table_3.png)
 
@@ -758,19 +800,17 @@ add_header_above(c(" " = 1, "低\n4.25" = 2, "中\n4.26 ~ 4.99" = 2, "高\n >= 5
 
 ## Table 4: Reduced from Models for Change in Employment
 
-```         
-模型結果與「調升基本工資會減少就業人數」矛盾
-```
+-   NJ 的 FTE 不減反增
 
--   Model 1: 若為紐澤西 FTE 差增加 2.75 [95% CI: 0.48 \~ 5.02]
+    -   Model 1: 若為紐澤西 FTE 差增加 2.75 [95% CI: 0.48 \~ 5.02]
 
--   Model 2: 調整（控制）餐廳類型、直營/加盟時，若為紐澤西 FTE 差增加 2.78 [95% CI: 0.51 \~ 5.06]
+    -   Model 2: 調整（控制）餐廳類型、直營/加盟時，若為紐澤西 FTE 差增加 2.78 [95% CI: 0.51 \~ 5.06]
 
--   Model 3: 距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 16.36 [95% CI: 4.71 \~ 28.01]
+    -   Model 3: 距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 16.36 [95% CI: 4.71 \~ 28.01]
 
--   Model 4: 調整（控制）餐廳類型、直營/加盟時，距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 15.88 [95% CI: 3.99 \~ 27.76]
+    -   Model 4: 調整（控制）餐廳類型、直營/加盟時，距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 15.88 [95% CI: 3.99 \~ 27.76]
 
--   Model 5: 調整（控制）餐廳類型、直營/加盟時、區域，距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 12.16 [95% CI: -2.22 \~ 26.55]
+    -   Model 5: 調整（控制）餐廳類型、直營/加盟時、區域，距離新的基本工資之差異（GAP）每增加 1 單位， FTE 差增加 12.16 [95% CI: -2.22 \~ 26.55]
 
 -   無法證明下列模型有差異：
 
@@ -779,6 +819,26 @@ add_header_above(c(" " = 1, "低\n4.25" = 2, "中\n4.26 ~ 4.99" = 2, "高\n >= 5
     -   Model 4 vs Model 3
 
     -   Model 5 vs Model 3
+
+> 模型結果與「調升基本工資會減少就業人數」矛盾
+>
+> 懷疑研究成果可能是受到某些樣本特徵影響的狀況下
+>
+> 將重要的特徵的影響考量在模型之中，並比較變化
+>
+> **US 統計學會的指引**
+>
+> -   p value **可以**用來表示結果與假設不相容程度
+>
+> -   p value 不能衡量假設為真的機率、或數據來自隨機產生的機率
+>
+> -   **科學結論和業務決策不應僅基於 p 值是否超過特定閾值**
+>
+> -   正確的推理需要**完整的報告和透明度**
+>
+> -   p value 不衡量效果的大小或結果的重要性
+>
+> -   p value 不能很好地衡量模型或假設的證據
 
 ![](table_4.png)
 
@@ -797,15 +857,16 @@ list_table_4%>%jtools::export_summs(digits = 2,
                                     model.names = c("州", "州\n類型\n自營", "GAP", "GAP\n類型\n自營", "GAP\n類型\n自營\n區域"),
                                     coefs = c("Intercept" = "(Intercept)",
                                               "NJ" = "stateNJ",
-                                              "KFC" = "chainKFC",
-                                              "Roy's" = "chainRoy Rogers",
-                                              "Wendy's" = "chainWendy's",
-                                              "Company-owned" = "co_ownedCompany-owned",
-                                              "GAP" = "gap",
-                                              "Central, NJ" = "locationcentral NJ",
-                                              "Northern, NJ" = "locationnorthern NJ",
-                                              "Northeast suburbs of PA" = "locationPA, northeast suburbs of Phila",
-                                              "Easton etc, PA" = "locationPA, Easton etc"))
+                                              # "KFC" = "chainKFC",
+                                              # "Roy's" = "chainRoy Rogers",
+                                              # "Wendy's" = "chainWendy's",
+                                              # "Company-owned" = "co_ownedCompany-owned",
+                                              "GAP" = "gap"
+                                              # "Central, NJ" = "locationcentral NJ",
+                                              # "Northern, NJ" = "locationnorthern NJ",
+                                              # "Northeast suburbs of PA" = "locationPA, northeast suburbs of Phila",
+                                              # "Easton etc, PA" = "locationPA, Easton etc"
+                                              ))
 
 anova(list_table_4[[2]], list_table_4[[1]])
 
@@ -832,58 +893,68 @@ anova(list_table_4[[5]], list_table_4[[3]])
 11. 僅使用 Camden 樣本：驗證部分區域的樣本
 12. 使用 PA 樣本：排除 NJ 餐廳且（錯誤地）將 GAP 定義為將工資提高到每小時 5.05 美元所需的工資增長比例（遠本是 0 ）
 
+> 餐廳可能會增加全職員工、減少工讀
+>
+> 研究的結果可能受到部分樣本或 outcome 影響
+>
+> 為了排除這個潛在的問題
+>
+> 就可以透過改變樣本、以及 outcome 計算方法來驗證
+
 ![](table_5.png)
 
 ## Table 6: Effects of Minimum-Wage Increase on Other Outcomes
 
-比較其他餐廳特徵，差異都不太明憲
+比較其他餐廳特徵，差異都不太明顯
+
+餐館可以通過減少員工福利，改變經營模式來抵消基本工資的影響
+
+-   餐廳營業時間
+
+-   餐廳收銀機數量
+
+-   營業時的收銀機數量
+
+-   減價員工餐（打折的比例都減少，但免費員工餐增加）
+
+-   推薦獎金
+
+```{=html}
+<!-- -->
+```
+-   NJ 和 PA 員工餐打折的比例都下降，但 NJ 更多
 
 ![](table_6.png)
 
 ## Table 7: Reduced-form Models for Change in the Price of a Full Meal
 
--   檢查非經常性薪資的改變，因為餐廳可以用減少福利來抵消基本工資的影響
-
--   NJ 和 PA 員工餐打折的比例都下降，但 NJ 更多
-
--   但免費員工餐比例增加
+-   也可以透過調漲售價轉嫁成本，所以檢查全餐的售價
 
 ![](table_7.png)
 
 ## Table 8: Estimated Effect of Minimum Wages on Numbers of Mcdonald's Restaurants, 1986-1991
 
+-   基本工資調漲也可能阻礙新餐廳的開張
+
 ![](table_8.png)
+
+# 研究結果
+
+1.  與經濟模型的判斷不同 NJ 的基本工資增加並沒有降低速食餐應的就業人數
+2.  沒有任何資訊表明兩組比較不公平
+3.  用各種替代就業人數的指標、或樣本來計算結果也相同
+4.  驗證其他與餐廳經營管理相同的指標，沒有發現基本工資增加使餐廳調整經營方式改變
 
 # 研究評論
 
-1.  **資料收集**
+1.  **資料收集：**背景目標、研究因素、關鍵指標、研究類型、分母分子、研究對象的偏誤
 
-    1.  背景目標
+2.  **數據分析：**避免混淆、關聯性與統計方法
 
-    2.  研究因素
+3.  **理解與應用：**主要結果、偏誤與混淆對研究的影響、局限性、結論合理性、適用人群
 
-    3.  關鍵指標
+# 反思
 
-    4.  研究類型
-
-    5.  分母分子
-
-    6.  研究對象的偏誤
-
-2.  **數據分析**
-
-    1.  避免混淆
-
-    2.  關聯性與統計方法
-
-3.  **理解與應用**
-
-    1.  主要結果
-
-    2.  偏誤與混淆對研究的影響
-
-    3.  局限性
-
-    4.  結論合理性
-
-    5.  適用人群
+1.  基礎科學與社會科學的差異
+2.  決策不應基於一個研究的顯著性
+3.  當代數據分析的問題：當數據唾手可得
